@@ -3,9 +3,7 @@ import numpy as np
 from pettingzoo.utils.env import ParallelEnv
 from gymnasium.spaces import Discrete, Box
 
-
 class Comp(ParallelEnv):
-    #TODO use action masking
     def __init__(self):
         self.gain = 1
         self.cost = -1
@@ -132,7 +130,7 @@ class Comp(ParallelEnv):
 
         return player1_payoff, player2_payoff
 
-    def get_obs(self):
+    def _get_obs(self):
 
         return {
             "player1": np.array([[
@@ -162,9 +160,23 @@ class Comp(ParallelEnv):
 
         self.weather_type = self._getPD()[1]
 
-        return self.get_obs()
+        return self._get_obs()
+
+    def _get_rewards(self):
+        return {
+            "player1": -1 if self.player1_life_points == 0 else 0,
+            "player2": -1 if self.player2_life_points == 0 else 0,
+        }   
 
     def step(self, actions):
+        if self.days_left == 0:
+            truncations = {a: True for a in self.agents}
+            terminations = {a: False for a in self.agents}
+            infos = {a: {} for a in self.agents}
+            
+            self.agents = [] 
+            return self._get_obs(), self._get_rewards(), terminations, truncations, infos
+
         self.player1_action = actions["player1"]
         self.player2_action = actions["player2"]
 
@@ -187,24 +199,14 @@ class Comp(ParallelEnv):
         self.player1_life_points = np.clip(self.player1_life_points, 0, self.num_life_points - 1)
         self.player2_life_points += player2_payoff
         self.player2_life_points = np.clip(self.player2_life_points, 0, self.num_life_points - 1)
-
-        # get rewards
-        rewards = {
-        "player1": -1 if self.player1_life_points == 0 else 0,
-        "player2": -1 if self.player2_life_points == 0 else 0,
-        }   
         
         terminations = {a: False for a in self.agents}
-
         truncations = {a: False for a in self.agents}
-        if self.days_left == 0:
-            truncations = {a: True for a in self.agents}
-            self.agents = [] 
-        self.days_left -= 1
-
         infos = {a: {} for a in self.agents}
 
-        return self.get_obs(), rewards, terminations, truncations, infos
+        self.days_left -= 1
+
+        return self._get_obs(), self._get_rewards(), terminations, truncations, infos
 
     def render(self):
         pass
