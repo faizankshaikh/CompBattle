@@ -1,5 +1,5 @@
 import numpy as np
-from copy import copy
+
 from pettingzoo.utils.env import ParallelEnv
 from gymnasium.spaces import Discrete, Box
 
@@ -9,10 +9,6 @@ class Comp(ParallelEnv):
     def __init__(self):
         self.gain = 1
         self.cost = -1
-        # self.gain_attack = 0
-        # self.gain_forage = 1
-        # self.cost_attack = -2
-        # self.cost_forage = -1
         self.gain_dead = 0
 
         self.action_dict = {0: "attack", 1: "forage", 2: "none"}
@@ -22,16 +18,7 @@ class Comp(ParallelEnv):
         self.num_actions = len(self.action_dict)
 
         self.possible_agents = ["player1", "player2"]
-        self.agents = copy(self.possible_agents)
-         
-        self.action_spaces = {
-            agent: Discrete(self.num_actions) for agent in self.agents
-        }
-
-        # [days_left, # player1_life_points, # player2_life_points, # action_other]
-        self.observation_spaces = {
-            agent: Box(low=0, high=4, shape=(1, 4)) for agent in self.agents
-        }
+        self.agents = self.possible_agents[:]
 
     def _getPD(self):
         weather_types = []
@@ -122,8 +109,8 @@ class Comp(ParallelEnv):
                 else:
                     player1_payoff, player2_payoff = self.cost, self.cost
             else:
-                # both players attack failure 
-                player1_payoff, player2_payoff = self.cost + self.cost, self.cost + self.cost
+                # both players attack
+                player1_payoff, player2_payoff = self.cost, self.cost
         elif self.player1_life_points != 0 and self.player2_life_points == 0:
             if self.player1_action == 1:
                 if player1_possible_outcome:
@@ -144,21 +131,10 @@ class Comp(ParallelEnv):
             player1_payoff, player2_payoff = self.gain_dead, self.gain_dead
 
         return player1_payoff, player2_payoff
-        
 
-    def reset(self, seed=None, options=None):
-        self.agents = copy(self.possible_agents)
-        self.days_left = self.num_days
+    def get_obs(self):
 
-        self.player1_life_points = np.random.randint(1, self.num_life_points)
-        self.player2_life_points = np.random.randint(1, self.num_life_points)
-
-        self.player1_action = 2
-        self.player2_action = 2
-
-        self.weather_type = self._getPD()[1]
-
-        self.observation_spaces = {
+        return {
             "player1": np.array([[
             self.days_left,
             self.player1_life_points,
@@ -172,8 +148,21 @@ class Comp(ParallelEnv):
             self.player1_action
             ]])
         }
+        
 
-        return self.observation_spaces
+    def reset(self, seed=None, options=None):
+        self.agents = self.possible_agents[:]
+        self.days_left = self.num_days
+
+        self.player1_life_points = np.random.randint(1, self.num_life_points)
+        self.player2_life_points = np.random.randint(1, self.num_life_points)
+
+        self.player1_action = 2
+        self.player2_action = 2
+
+        self.weather_type = self._getPD()[1]
+
+        return self.get_obs()
 
     def step(self, actions):
         self.player1_action = actions["player1"]
@@ -215,13 +204,18 @@ class Comp(ParallelEnv):
 
         infos = {a: {} for a in self.agents}
 
-        return self.observation_spaces, rewards, terminations, truncations, infos
+        return self.get_obs(), rewards, terminations, truncations, infos
 
     def render(self):
         pass
 
     def observation_space(self, agent):
-        return self.observation_spaces[agent]
+        # [days_left, # player1_life_points, # player2_life_points, # action_other]
+        return {
+            agent: Box(low=0, high=4, shape=(1, 4)) for agent in self.agents
+        }
 
     def action_space(self, agent):
-        return self.action_spaces[agent]
+        return {
+            agent: Discrete(self.num_actions) for agent in self.agents
+        }
