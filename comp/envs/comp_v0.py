@@ -4,6 +4,7 @@ from pettingzoo.utils.env import ParallelEnv
 from gymnasium.spaces import Discrete, Box
 
 class Comp(ParallelEnv):
+    metadata = {"render_mode": ["human"]}
     def __init__(self):
         self.gain = 1
         self.cost = -1
@@ -133,18 +134,24 @@ class Comp(ParallelEnv):
     def _get_obs(self):
 
         return {
-            "player1": np.array([[
-            self.days_left,
-            self.player1_life_points,
-            self.player2_life_points,
-            self.player2_action
+            "player1": {
+                "observation": np.array([[
+                self.days_left,
+                self.player1_life_points,
+                self.player2_life_points,
+                self.player2_action
             ]]),
-            "player2": np.array([[
-            self.days_left,
-            self.player1_life_points,
-            self.player2_life_points,
-            self.player1_action
-            ]])
+                "action_mask": [1, 1, 0]
+            },
+            "player2": {
+                "observation": np.array([[
+                self.days_left,
+                self.player1_life_points,
+                self.player2_life_points,
+                self.player1_action
+            ]]),
+                "action_mask": [1, 1, 0]
+            }
         }
         
 
@@ -200,13 +207,14 @@ class Comp(ParallelEnv):
         self.player2_life_points += player2_payoff
         self.player2_life_points = np.clip(self.player2_life_points, 0, self.num_life_points - 1)
         
+        rewards = {a: 0 for a in self.agents}
         terminations = {a: False for a in self.agents}
         truncations = {a: False for a in self.agents}
         infos = {a: {} for a in self.agents}
 
         self.days_left -= 1
 
-        return self._get_obs(), self._get_rewards(), terminations, truncations, infos
+        return self._get_obs(), rewards, terminations, truncations, infos
 
     def render(self):
         pass
