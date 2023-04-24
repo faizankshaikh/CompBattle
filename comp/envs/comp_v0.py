@@ -19,6 +19,14 @@ class Comp(ParallelEnv):
         self.possible_agents = ["player1", "player2"]
         self.agents = self.possible_agents[:]
 
+        self.observation_spaces = {
+            agent: Box(low=0, high=4, shape=(1, 4)) for agent in self.agents
+        }
+
+        self.action_spaces = {
+            agent: Discrete(self.num_actions) for agent in self.agents
+        }
+
     def _getPD(self):
         weather_types = []
         prob_succ_range = np.arange(0.1, 1, 0.1)
@@ -220,12 +228,7 @@ class Comp(ParallelEnv):
         pass
 
     def observation_space(self, agent):
-        # [days_left, # player1_life_points, # player2_life_points, # action_other]
-        return {
-            agent: Box(low=0, high=4, shape=(1, 4)) for agent in self.agents
-        }
+        return self.observation_spaces[agent]
 
     def action_space(self, agent):
-        return {
-            agent: Discrete(self.num_actions) for agent in self.agents
-        }
+        return self.action_spaces[agent]
