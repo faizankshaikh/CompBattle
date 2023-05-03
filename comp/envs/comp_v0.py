@@ -5,15 +5,16 @@ from gymnasium.spaces import Discrete, Box
 
 class Comp(ParallelEnv):
     metadata = {"render_mode": ["human"]}
-    def __init__(self):
+    def __init__(self, render_mode=None):
+        self.render_mode = render_mode
+
         self.gain = 1
         self.cost = -1
         self.gain_dead = 0
-
-        self.action_dict = {0: "attack", 1: "forage", 2: "none"}
-
         self.num_days = 2
         self.num_life_points = 4
+        
+        self.action_dict = {0: "attack", 1: "forage", 2: "none"}
         self.num_actions = len(self.action_dict)
 
         self.possible_agents = ["player1", "player2"]
@@ -175,6 +176,9 @@ class Comp(ParallelEnv):
 
         self.weather_type = self._getPD()[1]
 
+        if self.render_mode == "human":
+            self.render_text(is_start=True)
+
         return self._get_obs()
 
     def _get_rewards(self):
@@ -184,13 +188,6 @@ class Comp(ParallelEnv):
         }   
 
     def step(self, actions):
-        if self.days_left == 0:
-            truncations = {a: True for a in self.agents}
-            terminations = {a: False for a in self.agents}
-            infos = {a: {} for a in self.agents}
-            
-            self.agents = [] 
-            return self._get_obs(), self._get_rewards(), terminations, truncations, infos
 
         self.player1_action = actions["player1"]
         self.player2_action = actions["player2"]
@@ -222,13 +219,34 @@ class Comp(ParallelEnv):
 
         self.days_left -= 1
 
-        return self._get_obs(), rewards, terminations, truncations, infos
+        if self.render_mode == "human":
+            self.render_text()
 
-    def render(self):
-        pass
+        if self.days_left == 0:
+            truncations = {a: True for a in self.agents}
+            terminations = {a: False for a in self.agents}
+            infos = {a: {} for a in self.agents}
+            
+            self.agents = [] 
+            return self._get_obs(), self._get_rewards(), terminations, truncations, infos
+
+        return self._get_obs(), rewards, terminations, truncations, infos
 
     def observation_space(self, agent):
         return self.observation_spaces[agent]
 
     def action_space(self, agent):
         return self.action_spaces[agent]
+
+    def render(self):
+        if self.render_mode == "human":
+            self.render_text()
+
+    def render_text(self, is_start=False):
+        print(f"--Days left: {self.days_left}")
+        print(f"--Current life of agent 1: {self.player1_life_points}")
+        print(f"--Current life of agent 2: {self.player2_life_points}")
+
+        if not is_start:
+            print(f"--Previous action of agent 1: {self.action_dict[self.player1_action]}")
+            print(f"--Previous action of agent 2: {self.action_dict[self.player2_action]}")
