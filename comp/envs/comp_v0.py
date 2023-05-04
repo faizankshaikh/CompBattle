@@ -21,7 +21,7 @@ class Comp(ParallelEnv):
         self.agents = self.possible_agents[:]
 
         self.observation_spaces = {
-            agent: Box(low=0, high=4, shape=(1, 4)) for agent in self.agents
+            agent: Box(low=0, high=4, shape=(1, 5)) for agent in self.agents
         }
 
         self.action_spaces = {
@@ -33,19 +33,14 @@ class Comp(ParallelEnv):
         prob_succ_range = np.arange(0.1, 1, 0.1)
         for i in range(len(prob_succ_range)):
             pS = prob_succ_range[i]
-            pT = 0.8
+            pT = 1
             pP = 0
             pR = 1 - (1 - pS) ** 2
 
-            R = (pR * self.gain) + (1 - pR) * self.cost
-            S = (
-                pS * (1 - pT) * self.gain
-                + (1 - pS) * (1 - pT) * self.cost
-                + pS * pT * (self.gain + self.cost)
-                + (1 - pS) * pT * (self.cost + self.cost)
-            )
-            T = pT * self.gain + (1 - pT) * self.cost
-            P = self.cost
+            R = (pR * self.gain) + ((1 - pR) * self.cost)
+            S = (pS * self.gain) + ((1 - pS) * self.cost) + pT * self.cost
+            T = (pT * self.gain) + ((1 - pT) * self.cost)
+            P = (pP * self.gain) + ((1 - pP) * self.cost)
 
             if (T > R > P > S) and (2 * R > T + S):
                 weather_types.append(
@@ -85,7 +80,7 @@ class Comp(ParallelEnv):
 
         if self.player1_life_points != 0 and self.player2_life_points != 0:
             if self.player1_action == self.player2_action == 1:
-                if player1_possible_outcome:
+                if player1_possible_outcome and player2_possible_outcome:
                     player1_payoff, player2_payoff = self.gain, self.gain
                 else:
                     player1_payoff, player2_payoff = self.cost, self.cost
@@ -148,6 +143,7 @@ class Comp(ParallelEnv):
                 self.days_left,
                 self.player1_life_points,
                 self.player2_life_points,
+                self.player1_action,
                 self.player2_action
             ]]),
                 "action_mask": [1, 1, 0]
@@ -157,7 +153,8 @@ class Comp(ParallelEnv):
                 self.days_left,
                 self.player1_life_points,
                 self.player2_life_points,
-                self.player1_action
+                self.player1_action,
+                self.player2_action
             ]]),
                 "action_mask": [1, 1, 0]
             }
